@@ -15,7 +15,7 @@ namespace Nez.ImGuiTools
 		public bool ShowStyleEditor = false;
 		public bool ShowSceneGraphWindow = true;
 		public bool ShowCoreWindow = true;
-		public bool ShowSeperateGameWindow = true;
+		public bool ShowSeperateGameWindow = false;
 		public bool ShowMenuBar = true;
 
 		public bool FocusGameWindowOnMiddleClick = false;
