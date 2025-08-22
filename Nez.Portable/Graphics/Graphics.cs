@@ -39,6 +39,7 @@ namespace Nez
 		public Graphics(BitmapFont font)
 		{
 			Batcher = new Batcher(Core.GraphicsDevice);
+			Batcher.ShouldRoundDestinations = false; // SMOOTH MOVEMENT FIX: Disable pixel snapping
 			BitmapFont = font;
 
 			// the bottom/right pixel is white on the default font so we'll use that for the pixelTexture
