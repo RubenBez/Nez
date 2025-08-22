@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using ImGuiNET;
 using Nez.ImGuiTools.ObjectInspectors;
+using Nez.ImGuiTools.TypeInspectors;
 using Num = System.Numerics;
 
 
@@ -17,11 +18,15 @@ namespace Nez.ImGuiTools
 		string _componentNameFilter;
 		TransformInspector _transformInspector;
 		List<IComponentInspector> _componentInspectors = new List<IComponentInspector>();
+		List<AbstractTypeInspector> _entityInspectors = new List<AbstractTypeInspector>();
 
 		public EntityInspector(Entity entity)
 		{
 			Entity = entity;
 			_transformInspector = new TransformInspector(Entity.Transform);
+
+			// Get inspectable properties from the Entity itself (not just Components)
+			_entityInspectors = TypeInspectorUtils.GetInspectableProperties(entity);
 
 			for (var i = 0; i < entity.Components.Count; i++)
 				_componentInspectors.Add(new ComponentInspector(entity.Components[i]));
@@ -79,6 +84,25 @@ namespace Nez.ImGuiTools
 				NezImGui.MediumVerticalSpace();
 				_transformInspector.Draw();
 				NezImGui.MediumVerticalSpace();
+
+				// Draw Entity-specific properties (like Player movement properties)
+				if (_entityInspectors.Count > 0)
+				{
+					if (ImGui.CollapsingHeader("Entity Properties", ImGuiTreeNodeFlags.DefaultOpen))
+					{
+						for (var i = _entityInspectors.Count - 1; i >= 0; i--)
+						{
+							if (_entityInspectors[i].IsTargetDestroyed)
+							{
+								_entityInspectors.RemoveAt(i);
+								continue;
+							}
+
+							_entityInspectors[i].Draw();
+						}
+					}
+					NezImGui.MediumVerticalSpace();
+				}
 
 				// watch out for removed Components
 				for (var i = _componentInspectors.Count - 1; i >= 0; i--)

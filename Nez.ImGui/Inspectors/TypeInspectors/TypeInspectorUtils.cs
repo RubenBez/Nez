@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Nez.IEnumerableExtensions;
 using System.Reflection;
 using System;
+using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using TI = Nez.ImGuiTools.TypeInspectors;
@@ -15,6 +16,9 @@ namespace Nez.ImGuiTools.TypeInspectors
 		// Type cache seeing as how typeof isnt free and this will be hit a lot
 		static readonly Type notInspectableAttrType = typeof(NotInspectableAttribute);
 		static readonly Type inspectableAttrType = typeof(InspectableAttribute);
+		static readonly Type rangeAttrType = typeof(RangeAttribute);
+		static readonly Type tooltipAttrType = typeof(TooltipAttribute);
+		static readonly Type inspectorCallableAttrType = typeof(InspectorCallableAttribute);
 		static readonly Type componentType = typeof(Component);
 		static readonly Type transformType = typeof(Transform);
 		static readonly Type materialType = typeof(Material);
@@ -35,6 +39,7 @@ namespace Nez.ImGuiTools.TypeInspectors
 			var inspectors = new List<AbstractTypeInspector>();
 			var targetType = target.GetType();
 			var isComponentSubclass = target is Component;
+			var isEntitySubclass = target is Entity;
 
 			var fields = ReflectionUtils.GetFields(targetType);
 			foreach (var field in fields)
@@ -80,6 +85,10 @@ namespace Nez.ImGuiTools.TypeInspectors
 
 				var hasInspectableAttribute = prop.IsDefined(inspectableAttrType);
 
+				// For Entity subclasses, only show properties with inspector attributes
+				if (isEntitySubclass && !hasInspectableAttribute && !HasAnyInspectorAttribute(prop))
+					continue;
+
 				// private props must have the InspectableAttribute
 				if (!prop.GetMethod.IsPublic && !hasInspectableAttribute)
 					continue;
@@ -116,6 +125,19 @@ namespace Nez.ImGuiTools.TypeInspectors
 			return inspectors;
 		}
 
+		/// <summary>
+		/// Checks if a member has any inspector-related attributes like Range, Tooltip, etc.
+		/// </summary>
+		/// <param name="member">The member to check</param>
+		/// <returns>True if the member has any inspector attributes</returns>
+		static bool HasAnyInspectorAttribute(MemberInfo member)
+		{
+			return member.IsDefined(rangeAttrType) || 
+			       member.IsDefined(tooltipAttrType) || 
+			       member.IsDefined(inspectorCallableAttrType) ||
+			       member.GetCustomAttributes().Any(attr => attr is InspectableAttribute);
+		}
+
 		public static IEnumerable<MethodInfo> GetAllMethodsWithAttribute<T>(Type type) where T : Attribute
 		{
 			var methods = ReflectionUtils.GetMethods(type);
@@ -141,7 +163,7 @@ namespace Nez.ImGuiTools.TypeInspectors
 			// built-in types
 			if (SimpleTypeInspector.KSupportedTypes.Contains(valueType))
 				return new TI.SimpleTypeInspector();
-			if (target is Entity)
+			if (valueType == typeof(Entity) || valueType.IsSubclassOf(typeof(Entity)))
 				return new TI.EntityFieldInspector();
 			if (target is BlendState)
 				return new TI.BlendStateInspector();
