@@ -65,7 +65,8 @@ namespace Nez.ImGuiTools
 
 			// tone down indent
 			ImGui.GetStyle().IndentSpacing = 12;
-			ImGui.GetIO().ConfigWindowsMoveFromTitleBarOnly = true;
+			var io = ImGui.GetIO();
+			io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
 
 			// find all themes
 			_themes = typeof(NezImGuiThemes).GetMethods(System.Reflection.BindingFlags.Static |
