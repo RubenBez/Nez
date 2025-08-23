@@ -185,26 +185,36 @@ namespace Nez.ImGuiTools
 			io.GetClipboardTextFn = Marshal.GetFunctionPointerForDelegate<GetClipboardTextDelegate>(SDL2.SDL.SDL_GetClipboardText);
 #endif
 
-			_keys.Add(io.KeyMap[(int)ImGuiKey.Tab] = (int)Keys.Tab);
-			_keys.Add(io.KeyMap[(int)ImGuiKey.LeftArrow] = (int)Keys.Left);
-			_keys.Add(io.KeyMap[(int)ImGuiKey.RightArrow] = (int)Keys.Right);
-			_keys.Add(io.KeyMap[(int)ImGuiKey.UpArrow] = (int)Keys.Up);
-			_keys.Add(io.KeyMap[(int)ImGuiKey.DownArrow] = (int)Keys.Down);
-			_keys.Add(io.KeyMap[(int)ImGuiKey.PageUp] = (int)Keys.PageUp);
-			_keys.Add(io.KeyMap[(int)ImGuiKey.PageDown] = (int)Keys.PageDown);
-			_keys.Add(io.KeyMap[(int)ImGuiKey.Home] = (int)Keys.Home);
-			_keys.Add(io.KeyMap[(int)ImGuiKey.End] = (int)Keys.End);
-			_keys.Add(io.KeyMap[(int)ImGuiKey.Delete] = (int)Keys.Delete);
-			_keys.Add(io.KeyMap[(int)ImGuiKey.Backspace] = (int)Keys.Back);
-			_keys.Add(io.KeyMap[(int)ImGuiKey.Enter] = (int)Keys.Enter);
-			_keys.Add(io.KeyMap[(int)ImGuiKey.Escape] = (int)Keys.Escape);
-			_keys.Add(io.KeyMap[(int)ImGuiKey.LeftCtrl] = (int)Keys.LeftControl);
-			_keys.Add(io.KeyMap[(int)ImGuiKey.A] = (int)Keys.A);
-			_keys.Add(io.KeyMap[(int)ImGuiKey.C] = (int)Keys.C);
-			_keys.Add(io.KeyMap[(int)ImGuiKey.V] = (int)Keys.V);
-			_keys.Add(io.KeyMap[(int)ImGuiKey.X] = (int)Keys.X);
-			_keys.Add(io.KeyMap[(int)ImGuiKey.Y] = (int)Keys.Y);
-			_keys.Add(io.KeyMap[(int)ImGuiKey.Z] = (int)Keys.Z);
+			// ImGui 1.91+ removed KeyMap - keys are now handled automatically
+			// Just track the keys we need for input processing
+			_keys.Add((int)Keys.Tab);
+			_keys.Add((int)Keys.Left);
+			_keys.Add((int)Keys.Right);
+			_keys.Add((int)Keys.Up);
+			_keys.Add((int)Keys.Down);
+			_keys.Add((int)Keys.PageUp);
+			_keys.Add((int)Keys.PageDown);
+			_keys.Add((int)Keys.Home);
+			_keys.Add((int)Keys.End);
+			_keys.Add((int)Keys.Delete);
+			_keys.Add((int)Keys.Back);
+			_keys.Add((int)Keys.Enter);
+			_keys.Add((int)Keys.Escape);
+			_keys.Add((int)Keys.LeftControl);
+			_keys.Add((int)Keys.A);
+			_keys.Add((int)Keys.C);
+			_keys.Add((int)Keys.V);
+			_keys.Add((int)Keys.X);
+			_keys.Add((int)Keys.Y);
+			_keys.Add((int)Keys.Z);
+			
+			// Add additional keys for keyboard shortcuts
+			_keys.Add((int)Keys.N);
+			_keys.Add((int)Keys.E);
+			_keys.Add((int)Keys.F5);
+			
+			// Configure key ownership for ImGui (new in 1.91+)
+			io.ConfigFlags |= ImGuiConfigFlags.NavEnableKeyboard;
 
 
 #if !FNA
@@ -245,6 +255,41 @@ namespace Nez.ImGuiTools
 		}
 
 		/// <summary>
+		/// Converts XNA Keys to ImGui keys for the new key system in ImGui 1.91+
+		/// </summary>
+		ImGuiKey ConvertToImGuiKey(Keys key)
+		{
+			switch (key)
+			{
+				case Keys.Tab: return ImGuiKey.Tab;
+				case Keys.Left: return ImGuiKey.LeftArrow;
+				case Keys.Right: return ImGuiKey.RightArrow;
+				case Keys.Up: return ImGuiKey.UpArrow;
+				case Keys.Down: return ImGuiKey.DownArrow;
+				case Keys.PageUp: return ImGuiKey.PageUp;
+				case Keys.PageDown: return ImGuiKey.PageDown;
+				case Keys.Home: return ImGuiKey.Home;
+				case Keys.End: return ImGuiKey.End;
+				case Keys.Delete: return ImGuiKey.Delete;
+				case Keys.Back: return ImGuiKey.Backspace;
+				case Keys.Enter: return ImGuiKey.Enter;
+				case Keys.Escape: return ImGuiKey.Escape;
+				case Keys.LeftControl: return ImGuiKey.LeftCtrl;
+				case Keys.RightControl: return ImGuiKey.RightCtrl;
+				case Keys.A: return ImGuiKey.A;
+				case Keys.C: return ImGuiKey.C;
+				case Keys.V: return ImGuiKey.V;
+				case Keys.X: return ImGuiKey.X;
+				case Keys.Y: return ImGuiKey.Y;
+				case Keys.Z: return ImGuiKey.Z;
+				case Keys.N: return ImGuiKey.N;
+				case Keys.E: return ImGuiKey.E;
+				case Keys.F5: return ImGuiKey.F5;
+				default: return ImGuiKey.None;
+			}
+		}
+
+		/// <summary>
 		/// Sends XNA input state to ImGui
 		/// </summary>
 		void UpdateInput()
@@ -254,9 +299,15 @@ namespace Nez.ImGuiTools
 			var mouse = Input.CurrentMouseState;
 			var keyboard = Input.CurrentKeyboardState;
 
+			// ImGui 1.91+ uses new key system - convert XNA keys to ImGui keys
 			for (int i = 0; i < _keys.Count; i++)
 			{
-				io.KeysDown[_keys[i]] = keyboard.IsKeyDown((Keys)_keys[i]);
+				var key = (Keys)_keys[i];
+				var imguiKey = ConvertToImGuiKey(key);
+				if (imguiKey != ImGuiKey.None)
+				{
+					io.AddKeyEvent(imguiKey, keyboard.IsKeyDown(key));
+				}
 			}
 
 			io.KeyShift = keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift);
@@ -348,7 +399,7 @@ namespace Nez.ImGuiTools
 
 			for (var n = 0; n < drawData.CmdListsCount; n++)
 			{
-				var cmdList = drawData.CmdListsRange[n];
+				var cmdList = drawData.CmdLists[n];
 
 				fixed (void* vtxDstPtr = &_vertexData[vtxOffset * _vertexDeclarationSize])
 				fixed (void* idxDstPtr = &_indexData[idxOffset * sizeof(ushort)])
@@ -378,7 +429,7 @@ namespace Nez.ImGuiTools
 
 			for (int n = 0; n < drawData.CmdListsCount; n++)
 			{
-				var cmdList = drawData.CmdListsRange[n];
+				var cmdList = drawData.CmdLists[n];
 				for (int cmdi = 0; cmdi < cmdList.CmdBuffer.Size; cmdi++)
 				{
 					var drawCmd = cmdList.CmdBuffer[cmdi];
